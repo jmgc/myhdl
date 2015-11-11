@@ -60,12 +60,12 @@ def m_test_intf(clock,reset,a,b,c):
 
 
 def name_conflict_after_replace(clock, reset, a, a_x):
-    a_x_0 = [Signal(intbv(0)[len(a_x):]) for i in range(8)]
+    a_x_renamed0 = [Signal(intbv(0)[len(a_x):]) for i in range(8)]
 
     @always_seq(clock.posedge, reset=reset)
     def logic():
         a.x.next = a_x
-        a_x.next = a_x_0[1]
+        a_x.next = a_x_renamed0[1]
 
     return logic
 
