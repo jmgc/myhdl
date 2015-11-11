@@ -331,7 +331,6 @@ class _HierExtr(object):
                             cellvars.extend(cellvarlist)
                             objlist = _resolveRefs(symdict, local_gens)
                             cellvars.extend(objlist)
-                    #for dict in (frame.f_globals, frame.f_locals):
                     for n, v in symdict.items():
                         # extract signals and memories
                         # also keep track of whether they are used in generators

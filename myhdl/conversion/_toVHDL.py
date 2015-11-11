@@ -173,6 +173,7 @@ class _ToVHDLConvertor(object):
         top_inst = h.hierarchy[0]
         intf = _analyzeTopFunc(top_inst, func, *args, **kwargs)
         intf.name = name
+
         # sanity checks on interface
         for portname in intf.argnames:
             s = intf.argdict[portname]
@@ -396,11 +397,11 @@ def _writeSigDecls(f, intf, siglist, memlist):
             continue
         # infer attributes for the case of named signals in a list
         for i, s in enumerate(m.mem):
-            if not m._driven and s._driven:
+            if (not m._driven) and s._driven:
                 m._driven = s._driven
-            if not m._read and s._read:
+            if (not m._read) and s._read:
                 m._read = s._read
-        if not m._driven and not m._read:
+        if (not m._driven) and (not m._read):
             continue
         r = _getRangeString(m.elObj)
         p = _getTypeString(m.elObj)
