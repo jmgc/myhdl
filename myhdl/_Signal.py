@@ -129,7 +129,7 @@ class _Signal(object):
         self._min = self._max = None
         self._name = self._read = self._driven = None
         self._used = False
-        self._inList = False
+        self._inList = None
         self._nrbits = 0
         self._numeric = True
         self._printVcd = self._printVcdStr
