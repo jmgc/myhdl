@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import os
 path = os.path
 
+import myhdl
 from myhdl import *
 
 
@@ -13,7 +14,7 @@ def NonlocalBench():
     qout = Signal(intbv(ONE)[8:])
     init = Signal(bool(0))
     clk = Signal(bool(0))
-    reset = ResetSignal(0, active=1, async=True)
+    reset = ResetSignal(0, active=1, isasync=True)
 
     q = intbv(ONE)[8:]
 

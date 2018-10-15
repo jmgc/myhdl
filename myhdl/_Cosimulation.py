@@ -22,7 +22,7 @@ from __future__ import absolute_import
 
 import sys
 import os
-import shlex
+#import shlex
 import subprocess
 
 from myhdl._intbv import intbv
@@ -34,7 +34,6 @@ _MAXLINE = 4096
 
 class _error:
     pass
-_error.MultipleCosim = "Only a single cosimulator allowed"
 _error.DuplicateSigNames = "Duplicate signal name in myhdl vpi call"
 _error.SigNotFound = "Signal not found in Cosimulation arguments"
 _error.TimeZero = "myhdl vpi call when not at time 0"
@@ -48,13 +47,7 @@ class Cosimulation(object):
     """ Cosimulation class. """
 
     def __init__(self, exe="", **kwargs):
-
         """ Construct a cosimulation object. """
-
-        if _simulator._cosim:
-            raise CosimulationError(_error.MultipleCosim)
-        _simulator._cosim = 1
-
         rt, wt = os.pipe()
         rf, wf = os.pipe()
 
@@ -92,7 +85,9 @@ class Cosimulation(object):
             env['MYHDL_FROM_PIPE'] = str(msvcrt.get_osfhandle(rf))
 
         if isinstance(exe, string_types):
-            exe = shlex.split(exe)
+#             exe = shlex.split(exe)
+            exe = exe.split(' ')
+
 
         try:
             sp = subprocess.Popen(exe, env=env, close_fds=False)
@@ -111,7 +106,7 @@ class Cosimulation(object):
             if e[0] == "FROM":
                 if int(e[1]) != 0:
                     raise CosimulationError(_error.TimeZero, "$from_myhdl")
-                for i in range(2, len(e)-1, 2):
+                for i in range(2, len(e) - 1, 2):
                     n = e[i]
                     if n in fromSignames:
                         raise CosimulationError(_error.DuplicateSigNames, n)
@@ -119,12 +114,12 @@ class Cosimulation(object):
                         raise CosimulationError(_error.SigNotFound, n)
                     fromSignames.append(n)
                     fromSigs.append(kwargs[n])
-                    fromSizes.append(int(e[i+1]))
+                    fromSizes.append(int(e[i + 1]))
                 os.write(wf, b"OK")
             elif e[0] == "TO":
                 if int(e[1]) != 0:
                     raise CosimulationError(_error.TimeZero, "$to_myhdl")
-                for i in range(2, len(e)-1, 2):
+                for i in range(2, len(e) - 1, 2):
                     n = e[i]
                     if n in toSignames:
                         raise CosimulationError(_error.DuplicateSigNames, n)
@@ -133,7 +128,7 @@ class Cosimulation(object):
                     toSignames.append(n)
                     toSigs.append(kwargs[n])
                     toSigDict[n] = kwargs[n]
-                    toSizes.append(int(e[i+1]))
+                    toSizes.append(int(e[i + 1]))
                 os.write(wf, b"OK")
             elif e[0] == "START":
                 if not toSignames:
@@ -151,7 +146,7 @@ class Cosimulation(object):
             raise CosimulationError(_error.SimulationEnd)
         e = buf.split()
         for i in range(1, len(e), 2):
-            s, v = self._toSigDict[e[i]], e[i+1]
+            s, v = self._toSigDict[e[i]], e[i + 1]
             if v in 'zZ':
                 next = None
             elif v in 'xX':
@@ -160,7 +155,7 @@ class Cosimulation(object):
                 try:
                     next = int(v, 16)
                     if s._nrbits and s._min is not None and s._min < 0:
-                        if next >= (1 << (s._nrbits-1)):
+                        if next >= (1 << (s._nrbits - 1)):
                             next |= (-1 << s._nrbits)
                 except ValueError:
                     next = intbv(0)
@@ -172,7 +167,7 @@ class Cosimulation(object):
         buflist = []
         buf = repr(time)
         if buf[-1] == 'L':
-            buf = buf[:-1] # strip trailing L
+            buf = buf[:-1]  # strip trailing L
         buflist.append(buf)
         if self._hasChange:
             self._hasChange = 0
@@ -183,7 +178,7 @@ class Cosimulation(object):
                     v += (1 << s._nrbits)
                 buf = hex(v)[2:]
                 if buf[-1] == 'L':
-                    buf = buf[:-1] # strip trailing L
+                    buf = buf[:-1]  # strip trailing L
                 buflist.append(buf)
         os.write(self._wf, to_bytes(" ".join(buflist)))
         self._getMode = 1
@@ -193,7 +188,3 @@ class Cosimulation(object):
         while 1:
             yield sigs
             self._hasChange = 1
-
-    def __del__(self):
-        """ Clear flag when this object destroyed - to suite unittest. """
-        _simulator._cosim = 0

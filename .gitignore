@@ -2,7 +2,10 @@
 *~
 *.swp
 *.out
+*.coverage
 build/
+.cache
+.style.yapf
 
 # Python
 *.py[cod]
@@ -30,3 +33,6 @@ work_vcom/
 # Test artifacts
 myhdl/**/*.v
 myhdl/**/*.vhd
+
+# Pycharm ide junk
+.idea/

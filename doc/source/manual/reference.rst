@@ -41,6 +41,14 @@ A :class:`Simulation` object has the following method:
    Run the simulation forever (by default) or for a specified duration.
 
 
+.. method:: Simulation.quit()
+
+   Quit the simulation after it has run for a specified duration. The method should
+   be called (the simulation instance must be quit) before another simulation
+   instance is created. The method is called by default when the simulation is run
+   forever.
+
+
 .. _ref-simsupport:
 
 Simulation support functions
@@ -85,8 +93,18 @@ Waveform tracing
       This attribute is used to overwrite the default top-level instance name and the
       basename of the VCD output filename.
 
+   .. attribute:: directory
+
+      This attribute is used to set the directory to which VCD files are written. By
+      default, the current working directory is used.
+
+   .. attribute:: filename
+
+      This attribute is used to set the filename to which VCD files are written. By
+      default, the name attribbute is used.
+
    .. attribute:: timescale
-   
+
       This attribute is used to set the timescale corresponding to unit steps,
       according to the VCD format. The assigned value should be a string.
       The default timescale is "1ns".
@@ -97,6 +115,71 @@ Waveform tracing
 Modeling
 ========
 
+.. _ref-block:
+
+The `block` decorator
+---------------------
+
+.. function:: block()
+
+   The `block` decorator enables a method-based API which is more consistent,
+   simplifies implementation, and reduces the size of the `myhdl` namespace.
+    
+   The methods work on block instances, created by calling a function decorated
+   with the `block` decorator::
+
+       @block
+       def myblock(<ports>):
+       ...
+       return <instances>
+       
+       inst = myblock(<port-associations>)
+       # inst supports the methods of the block instance API
+
+The API on a block instance looks as follows:
+
+.. method:: <block_instance>.run_sim(duration=None)
+
+   Run a simulation "forever" (default) or for a specified duration.   
+
+.. method:: <block_instance>.config_sim(backend='myhdl', trace=False)
+
+   Optional simulation configuration: 
+
+   *backend*: Defaults to 'myhdl
+
+   *trace*: Enable waveform tracing, default False.  
+
+.. method:: <block_instance>.quit_sim()
+
+   Quit an active simulation. This is method is currently required because
+   only a single simulation can be active.
+
+.. method:: <block_instance>.convert(hdl='Verilog', **kwargs)  
+
+   Converts MyHDL code to a target HDL.
+
+   *hdl*: 'VHDL' or 'Verilog'. Defaults to Verilog.
+
+   Supported keyword arguments:
+
+   *path*: Destination folder. Defaults to current working dir.   
+
+   *name*: Module and output file name. Defaults to `self.mod.__name__`.      
+
+   *trace*: Whether the testbench should dump all signal waveforms. Defaults to False.   
+
+   *testbench*: Verilog only. Specifies whether a testbench should be created.  Defaults to True.   
+
+   *timescale*: timescale parameter. Defaults to '1ns/10ps'. Verilog only.   
+
+.. method:: <block_instance>.verify_convert()
+
+  Verify conversion output, by comparing target HDL simulation log with MyHDL simulation log.   
+
+.. method:: <block_instance>.analyze_convert()
+
+  Analyze conversion output by compilation with target HDL compiler.   
 
 .. _ref-sig:
 
@@ -193,13 +276,13 @@ Regular signals
 	This method returns a :class:`_SliceSignal` shadow signal. 
 
 
-.. class:: ResetSignal(val, active, async)
+.. class:: ResetSignal(val, active, isasync)
 
-    This Signal subclass defines reset signals. *val*, *active*, and *async*
+    This Signal subclass defines reset signals. *val*, *active*, and *isasync*
     are mandatory arguments.
     *val* is a boolean value that specifies the intial value,
     *active* is a boolean value that specifies the active level.
-    *async* is a boolean value that specifies the reset style:
+    *isasync* is a boolean value that specifies the reset style:
     asynchronous (``True``) or synchronous (``False``).
 
     This class should be used in conjunction with the :func:`always_seq`
@@ -328,8 +411,8 @@ are forked, while the original generator resumes immediately.
 
 .. _ref-deco:
 
-Decorator functions
--------------------
+Decorator functions to create generators
+----------------------------------------
 
 MyHDL defines a number of decorator functions, that make it easier to create
 generators from local generator functions.

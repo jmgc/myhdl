@@ -6,6 +6,7 @@ import random
 from random import randrange
 random.seed(2)
 
+import myhdl
 from myhdl import *
 
 from myhdl import ConversionError
@@ -14,9 +15,10 @@ from myhdl.conversion._misc import _error
 
 ACTIVE_LOW, INACTIVE_HIGH = 0, 1
 
+@block
 def incRef(count, enable, clock, reset, n):
     """ Incrementer with enable.
-    
+
     count -- output
     enable -- control input, increment when 1
     clock -- clock input
@@ -35,11 +37,12 @@ def incRef(count, enable, clock, reset, n):
     return logic
 
 
+@block
 def incGen(count, enable, clock, reset, n):
-    """ Generator with __vhdl__ is not permitted """
+    """ Generator with vhdl_code is not permitted """
     @instance
     def logic():
-        __vhdl__ = "Template string"
+        incGen.vhdl_code = "Template string"
         while 1:
             yield clock.posedge, reset.negedge
             if reset == ACTIVE_LOW:
@@ -49,10 +52,11 @@ def incGen(count, enable, clock, reset, n):
                     count.next = (count + 1) % n
     return logic
 
-                                        
+
+@block
 def inc(count, enable, clock, reset, n):
     """ Incrementer with enable.
-    
+
     count -- output
     enable -- control input, increment when 1
     clock -- clock input
@@ -71,24 +75,26 @@ def inc(count, enable, clock, reset, n):
 
     count.driven = "reg"
 
-    __vhdl__ = \
+    inc.vhdl_code = \
 """
-process (%(clock)s, %(reset)s) begin
-    if (reset = '0') then
-        %(count)s <= (others => '0');
-    elsif rising_edge(%(clock)s) then
-        if (enable = '1') then
-            %(count)s <= (%(count)s + 1) mod %(n)s;
+process ($clock, $reset) begin
+    if ($reset = '0') then
+        $count <= (others => '0');
+    elsif rising_edge($clock) then
+        if ($enable = '1') then
+            $count <= ($count + 1) mod $n;
         end if;
     end if;
 end process;
 """
-                
+
     return incProcess
 
 
+
+@block
 def incErr(count, enable, clock, reset, n):
-    
+
     @always(clock.posedge, reset.negedge)
     def incProcess():
         # make it fail in conversion
@@ -101,24 +107,25 @@ def incErr(count, enable, clock, reset, n):
 
     count.driven = "reg"
 
-    __vhdl__ = \
+    incErr.vhdl_code = \
 """
-always @(posedge %(clock)s, negedge %(reset)s) begin
-    if (reset == 0) begin
-        %(count)s <= 0;
+always @(posedge $clock, negedge $reset) begin
+    if ($reset == 0) begin
+        $count <= 0;
     end
     else begin
-        if (enable) begin
-            %(count)s <= (%(countq)s + 1) %% %(n)s;
+        if ($enable) begin
+            $count <= ($countq + 1) %% $n;
         end
     end
 end
 """
-                
+
     return incProcess
 
 
 
+@block
 def inc_comb(nextCount, count, n):
 
     @always_comb
@@ -129,17 +136,20 @@ def inc_comb(nextCount, count, n):
 
     nextCount.driven = "wire"
 
-    __vhdl__ =\
+    inc_comb.vhdl_code =\
 """
-%(nextCount)s <= (%(count)s + 1) mod %(n)s;
+$nextCount <= ($count + 1) mod $n;
 """
 
     return logic
 
+@block
 def inc_seq(count, nextCount, enable, clock, reset):
 
     @always(clock.posedge, reset.negedge)
     def logic():
+        # make if fail in conversion
+        import types
         if reset == ACTIVE_LOW:
             count.next = 0
         else:
@@ -148,23 +158,24 @@ def inc_seq(count, nextCount, enable, clock, reset):
 
     count.driven = True
 
-    __vhdl__ = \
+    inc_seq.vhdl_code = \
 """
-process (%(clock)s, %(reset)s) begin
-    if (reset = '0') then
-        %(count)s <= (others => '0');
-    elsif rising_edge(%(clock)s) then
-        if (enable = '1') then
-            %(count)s <= %(nextCount)s;
+process ($clock, $reset) begin
+    if ($reset = '0') then
+        $count <= (others => '0');
+    elsif rising_edge($clock) then
+        if ($enable = '1') then
+            $count <= $nextCount;
         end if;
     end if;
 end process;
 """
-    
+
     return logic
 
+@block
 def inc2(count, enable, clock, reset, n):
-    
+
     nextCount = Signal(intbv(0, min=0, max=n))
 
     comb = inc_comb(nextCount, count, n)
@@ -173,11 +184,51 @@ def inc2(count, enable, clock, reset, n):
     return comb, seq
 
 
+@block
 def inc3(count, enable, clock, reset, n):
     inc2_inst = inc2(count, enable, clock, reset, n)
     return inc2_inst
 
+class ClassIncrementer(object):
+    @block
+    def inc(self, count, enable, clock, reset, n):
+        """ Incrementer with enable.
 
+        count -- output
+        enable -- control input, increment when 1
+        clock -- clock input
+        reset -- asynchronous reset input
+        n -- counter max value
+        """
+        @always(clock.posedge, reset.negedge)
+        def incProcess():
+            # make it fail in conversion
+            import types
+            if reset == ACTIVE_LOW:
+                count.next = 0
+            else:
+                if enable:
+                    count.next = (count + 1) % n
+
+        count.driven = "reg"
+
+        self.inc.vhdl_code = \
+    """
+    process ($clock, $reset) begin
+        if ($reset = '0') then
+            $count <= (others => '0');
+        elsif rising_edge($clock) then
+            if ($enable = '1') then
+                $count <= ($count + 1) mod $n;
+            end if;
+        end if;
+    end process;
+    """
+
+        return incProcess
+
+
+@block
 def clockGen(clock):
     @instance
     def logic():
@@ -191,6 +242,7 @@ NRTESTS = 1000
 
 ENABLES = tuple([min(1, randrange(5)) for i in range(NRTESTS)])
 
+@block
 def stimulus(enable, clock, reset):
     @instance
     def logic():
@@ -209,6 +261,7 @@ def stimulus(enable, clock, reset):
     return logic
 
 
+@block
 def check(count, enable, clock, reset, n):
     @instance
     def logic():
@@ -226,7 +279,7 @@ def check(count, enable, clock, reset, n):
             print(count)
     return logic
 
-
+@block
 def customBench(inc):
 
     m = 8
@@ -246,43 +299,45 @@ def customBench(inc):
 
 
 def testIncRef():
-    assert conversion.verify(customBench, incRef) == 0
+    assert conversion.verify(customBench(incRef)) == 0
 
 def testInc():
-    assert conversion.verify(customBench, inc) == 0
-    
+    assert conversion.verify(customBench(inc)) == 0
+
 def testInc2():
-    assert conversion.verify(customBench, inc2) == 0
-    
+    assert conversion.verify(customBench(inc2)) == 0
+
 def testInc3():
-    assert conversion.verify(customBench, inc3) == 0
+    assert conversion.verify(customBench(inc3)) == 0
 
 def testIncGen():
     try:
-        assert conversion.verify(customBench, incGen) == 0
+        assert conversion.verify(customBench(incGen)) == 0
     except ConversionError as e:
         pass
     else:
         assert False
-        
+
 def testIncErr():
     try:
-        assert conversion.verify(customBench, incErr) == 0
+        assert conversion.verify(customBench(incErr)) == 0
     except ConversionError as e:
         pass
     else:
         assert False
 
+def testMethodInc():
+    incrementer = ClassIncrementer()
+    assert conversion.verify(customBench(incrementer.inc)) == 0
 
 
 
-    
-
-    
-        
 
 
-                
 
-        
+
+
+
+
+
 
